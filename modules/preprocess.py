@@ -72,7 +72,8 @@ hdf5_file = hdf5_file_main['original_data']
 # create new HDF5 file to hold cropped data.
 # ------------------------------------------------------------------------------------
 logger.info('creating new HDF5 dataset to hold cropped/normalized data')
-filename = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS_Cropped_Normalized_Unprocessed.h5')
+filename = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS2018_Cropped.h5')
+# filename = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS_Cropped_Normalized_Unprocessed.h5')
 new_hdf5 = h5py.File(filename, mode='w')
 logger.info('created new database at {}'.format(filename))
 
@@ -143,7 +144,7 @@ for run_on in run_on_list:
     # find mean and standard deviation, and apply to data. Also write the mean/std values to disk
     if run_on in std_list:
         logger.info('The dataset {} needs standardization'.format(run_on))
-        _tmp, vals = standardize(im_np, findMeanVarOnly=True, saveDump=saveMeanVarFilename + run_on + '_mean_std.p')
+        _tmp, vals = standardize(im_np, findMeanVarOnly=True, saveDump=saveMeanVarFilename + '/' + run_on + '_mean_std.p')
         logging.info('Calculated normalization values for {}:\n{}'.format(run_on, vals))
         del im_np
 

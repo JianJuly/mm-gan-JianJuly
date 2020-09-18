@@ -36,23 +36,25 @@ elif 'computecanada' in node_name: # we're in compute canada, maybe in an intera
     mount_path_prefix = '/home/asa224/' # home directory
 else:
     # this is probably my workstation or TS server
-    mount_path_prefix = '/local-scratch/anmol/data'
+    mount_path_prefix = '/home/jianjunming/data/open_datasets'
 
 config = {}
 # set the data directory and output hdf5 file path.
 # data_dir is the top level path containing both training and validation sets of the brats dataset.
-config['data_dir_prefix'] = os.path.join(mount_path_prefix, 'BRATS2018_Full/') # this should be top level path
-config['hdf5_filepath_prefix'] = os.path.join(mount_path_prefix, 'BRATS2018/HDF5_Datasets/BRATS2018_Unprocessed.h5') # top level path
-config['hdf5_filepath_prefix_2017'] = os.path.join(mount_path_prefix, 'scratch/asa224/Datasets/BRATS2017/HDF5_Datasets/BRATS.h5') # top level path
+#TODO
+config['data_dir_prefix'] = os.path.join(mount_path_prefix, 'BRATS2018/') # this should be top level path
+config['hdf5_filepath_prefix'] = '../data/BRATS2018/HDF5_Datasets/BRATS2018_Unprocessed.h5' # /home/jianjunming/projects/mm-gan-JianJuly/
+# config['hdf5_filepath_prefix_2017'] = os.path.join(mount_path_prefix, 'scratch/asa224/Datasets/BRATS2017/HDF5_Datasets/BRATS.h5') # top level path
 config['hdf5_combined'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS_Combined_Unprocessed.h5')
-config['hdf5_filepath_cropped'] = os.path.join(mount_path_prefix, 'BRATS2018/HDF5_Datasets/BRATS2018_Cropped_Normalized_Unprocessed.h5') # top level path
+config['hdf5_filepath_cropped'] =  '../data/BRATS2018/HDF5_Datasets/BRATS2018_Cropped.h5' # top level path
+# config['hdf5_filepath_cropped'] =  '../data/BRATS2018/HDF5_Datasets/BRATS2018_Cropped_Normalized_Unprocessed.h5' # top level path
 config['saveMeanVarFilepathHGG'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS2018_HDF5_Datasetstraining_data_hgg_mean_var.p')
 config['saveMeanVarFilepathLGG'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS2018_HDF5_Datasetstraining_data_lgg_mean_var.p')
 config['saveMeanVarCombinedData'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'combined_data_mean_var.p')
 
-config['model_snapshot_location'] = os.path.join(mount_path_prefix, 'scratch/asa224/model-snapshots/')
-config['model_checkpoint_location'] = os.path.join(mount_path_prefix, 'scratch/asa224/model-checkpoints/')
-config['model_prediction_location'] = os.path.join(mount_path_prefix, 'scratch/asa224/model-predictions/')
+config['model_snapshot_location'] = 'checkpoints/model-snapshots/'
+config['model_checkpoint_location'] = 'checkpoints/model-checkpoints/'
+config['model_prediction_location'] = 'checkpoints/model-predictions/'
 # # IF YOU PERFORM PREPROCESSING, THESE VARIABLES ARE TO BE CHANGED. DEFAULT VALUES ARE:
 # config['spatial_size_for_training'] = (240, 240) # If any preprocessing is done, then this needs to change. This is the shape of data that you want to train with. If you are changing this that means you did some preprocessing.
 # config['num_slices'] = 155 # number of slices in input data. THIS SHOULD CHANGE AS WELL WHEN PERFORMING PREPROCESSING
@@ -67,7 +69,7 @@ config['train_hgg_patients'] = 210 # number of HGG patients in training
 config['train_lgg_patients'] = 75 # number of LGG patients in training
 config['validation_patients'] = 66 # number of patients in validation
 
-config['batch_size'] = 1 # how many images to load at once in the generator
+config['batch_size'] = 2 # how many images to load at once in the generator
 
 config['cropping_coords'] = [29, 223, 41, 196, 0, 148] # coordinates used to crop the volumes, this is generated using the notebook checkLargestCropSize.ipynb
 config['size_after_cropping'] = [194, 155, 148] # set this if you set the above variable. Calculate this using the notebook again.

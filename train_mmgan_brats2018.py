@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
 import argparse
 from modules.advanced_gans.models import *
 from torch.autograd import Variable
@@ -32,30 +33,30 @@ warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='epoch to start training from')
-parser.add_argument('--n_epochs', type=int, default=3, help='number of epochs of training')
+parser.add_argument('--n_epochs', type=int, default=60, help='number of epochs of training')
 parser.add_argument('--dataset', type=str, default="BRATS2018", help='name of the dataset')
 parser.add_argument('--grade', type=str, default="LGG", help='grade of tumor to train on')
 parser.add_argument('--path_prefix', type=str, default="", help='path prefix to choose')
-parser.add_argument('--batch_size', type=int, default=4, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=74, help='size of the batches')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from which to start lr decay')
-parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
 parser.add_argument('--img_height', type=int, default=256, help='size of image height')
 parser.add_argument('--img_width', type=int, default=256, help='size of image width')
 parser.add_argument('--channels', type=int, default=4, help='number of image channels')
 parser.add_argument('--out_channels', type=int, default=4, help='number of output channels')
 parser.add_argument('--sample_interval', type=int, default=500, help='interval between sampling of images from generators')
-parser.add_argument('--train_patient_idx', type=int, default=3, help='number of patients to train with')
+parser.add_argument('--train_patient_idx', type=int, default=70, help='number of patients to train with')
 parser.add_argument('--checkpoint_interval', type=int, default=-1, help='interval between model checkpoints')
 parser.add_argument('--discrim_type', type=int, default=1, help='discriminator type to use, 0 for normal, 1 for PatchGAN')
-parser.add_argument('--test_pats', type=int, default=1, help='number of test patients')
-parser.add_argument('--model_name', type=str, default='model_pycharm_test', help='name of mode')
+parser.add_argument('--test_pats', type=int, default=5, help='number of test patients')
+parser.add_argument('--model_name', type=str, default='mmgan_lgg_zeros_cl', help='name of mode')
 parser.add_argument('--log_level', type=str, default='info', help='logging level to choose')
 parser.add_argument('--c_learning', type=int, default=1, help='whether  or not use curriculum learning framework')
 parser.add_argument('--use_tanh', action='store_true', help='use tanh normalization throughout')
-parser.add_argument('--z_type', type=str, default='noise', help='what type of imputation method to use')
+parser.add_argument('--z_type', type=str, default='zeros', help='what type of imputation method to use')
 parser.add_argument('--ic', type=int, default=1, help='whether to use implicit conditioning (1) or not (0)')
 
 opt = parser.parse_args()
@@ -69,12 +70,8 @@ elif 'debug' in opt.log_level:
 # =============================================================================
 # Create Training and Validation data loaders
 # =============================================================================
-if opt.path_prefix == "":
-    # parent_path = '/scratch/asa224/asa224/Datasets/BRATS2018/HDF5_Datasets/'
-    parent_path = '/local-scratch/anmol/data/{}/HDF5_Datasets/'.format(opt.dataset)
-else:
-    # notice there's one less asa224 here
-    parent_path = os.path.join(opt.path_prefix, 'scratch/asa224/Datasets/BRATS2018/HDF5_Datasets/')
+
+parent_path = 'data/{}/HDF5_Datasets/'.format(opt.dataset)
 
 if opt.dataset == 'BRATS2018':
     if opt.grade == 'HGG':
@@ -180,7 +177,7 @@ discriminator = Discriminator(in_channels=opt.channels, dataset='BRATS2018')
 # =============================================================================
 
 if opt.path_prefix == "":
-    root = '/local-scratch/anmol/results_new/project_880/'
+    root = 'checkpoints/'
 else: # NOT USED
     root = os.path.join(opt.path_prefix, 'rrg_proj_dir/Results/project_880_new/mm_synthesis_gan_results/')
     logger.warning("root: {}".format(root))
@@ -432,10 +429,10 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
             optimizer_G.step()
 
             # save the losses
-            G_train_l1_losses.append(loss_pixel.data[0])
-            G_train_losses.append(loss_GAN.data[0])
-            G_losses.append(G_train_total_loss.data[0])
-            synth_losses.append(synth_loss.data[0])
+            G_train_l1_losses.append(loss_pixel.item())
+            G_train_losses.append(loss_GAN.item())
+            G_losses.append(G_train_total_loss.item())
+            synth_losses.append(synth_loss.item())
 
             # TRAIN DISCRIMINATOR D
             # this takes in the real x as X-INPUT and real x as Y-INPUT
@@ -468,9 +465,9 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
             D_train_loss = 0.5 * (loss_real + loss_fake)
 
             # for printing purposes
-            D_real_losses.append(loss_real.data[0])
-            D_fake_losses.append(loss_fake.data[0])
-            D_losses.append(D_train_loss.data[0])
+            D_real_losses.append(loss_real.item())
+            D_fake_losses.append(loss_fake.item())
+            D_losses.append(D_train_loss.item())
 
             D_train_loss.backward()
             optimizer_D.step()

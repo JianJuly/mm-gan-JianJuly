@@ -12,7 +12,7 @@ dependencies:
   - cycler=0.10.0=py_1
   - dask-core=1.0.0=py_0
   - decorator=4.3.0=py_0
-  - matplotlib=2.2.3=py35h8e2386c_0
+#  - matplotlib=2.2.3=py35h8e2386c_0
   - networkx=2.2=py_1
   - openssl=1.0.2p=h470a237_1
   - pyqt=5.6.0=py35h8210e8a_7

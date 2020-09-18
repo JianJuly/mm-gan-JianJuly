@@ -7,8 +7,10 @@ from math import log10
 import csv
 import shutil
 import scipy.misc
+
 if 'cdr' in platform.node() or 'ts' in platform.node():
     import matplotlib.pyplot
+
     matplotlib.pyplot.switch_backend('agg')
 from skimage.measure import compare_ssim
 from matplotlib import pylab
@@ -151,7 +153,7 @@ class BrainMRIData(Dataset):
                 #             curr_max[m] = self.xdataset[i, m].max()
 
                 # typically BRATS uses 12 bits (all dicoms do), but there  are like
-                self.x_max = {0: 4096.0,  1: 4096.0, 2: 4096.0, 3: 4096.0}
+                self.x_max = {0: 4096.0, 1: 4096.0, 2: 4096.0, 3: 4096.0}
 
             if 'validation_data' not in self.xdataset_name and load_seg:
                 self.ydataset = self.h5file[self.parent_name][self.ydataset_name]
@@ -259,7 +261,7 @@ class BrainMRIData(Dataset):
         for m in range(0, 4):
             if len(im.shape) > 4:
                 for k in range(0, im.shape[0]):
-                    den = self.x_max[m] - im[k, m, ...].min() # max of this modality across the dataset
+                    den = self.x_max[m] - im[k, m, ...].min()  # max of this modality across the dataset
                     im[k, m, ...] = 2 * ((im[k, m, ...] - im[k, m, ...].min()) / den) - 1
             else:
                 den = im[m, ...].max() - im[m, ...].min()  # max of this modality across the dataset
@@ -279,7 +281,7 @@ class BrainMRIData(Dataset):
                     if den == 0.0:
                         im[k, m, ...] = -1.0
                     else:
-                        im[k, m, ...] = 2 * ((im[k, m, ...] - im[k, m, ...].min()) /  den) - 1
+                        im[k, m, ...] = 2 * ((im[k, m, ...] - im[k, m, ...].min()) / den) - 1
             else:
                 den = im[m, ...].min() - im[m, ...].min()
 
@@ -316,6 +318,7 @@ class BrainMRIData(Dataset):
             return True
         except:
             raise
+
 
 def revert_mean_std(im, mean_var):
     """
@@ -406,7 +409,7 @@ def my_collate(batch):
 
 def generate_training_strategy(dataset_name, curr_epoch, total_epochs):
     if dataset_name == 'ISLES2015':
-        FIRST_BRACKET = 50 # X% of the epochs for easy scenarios
+        FIRST_BRACKET = 50  # X% of the epochs for easy scenarios
         if curr_epoch <= ((total_epochs * FIRST_BRACKET) / 100):
             logger.debug('First Bracket')
             rand_val = torch.randint(low=3, high=7, size=(1,))
@@ -447,7 +450,9 @@ def generate_training_strategy(dataset_name, curr_epoch, total_epochs):
 
     return rand_val
 
-def show_intermediate_results_BRATS(G, test_patient, save_path, all_scenarios, epoch, curr_scenario_range=None, batch_size_to_test=5):
+
+def show_intermediate_results_BRATS(G, test_patient, save_path, all_scenarios, epoch, curr_scenario_range=None,
+                                    batch_size_to_test=5):
     if isinstance(test_patient, list):
         patients = test_patient
     else:
@@ -558,7 +563,7 @@ def show_intermediate_results_BRATS(G, test_patient, save_path, all_scenarios, e
                                                      indices):  # curr_row also controls the sequence to show
                 for curr_col, curr_slice_idx in zip(range(0, cols), range(start_slice, end_slice, slice_offset)):
                     # we use patient['image'] as it contains ALL slices for the patient, not batch wise
-                    axes[curr_row, curr_col].imshow(G_all_slices[curr_slice_idx, curr_sequence_index,...], cmap='gray')
+                    axes[curr_row, curr_col].imshow(G_all_slices[curr_slice_idx, curr_sequence_index, ...], cmap='gray')
                     axes[curr_row, curr_col].axis('off')
                 axes[curr_row, 0].axis('on')
                 axes[curr_row, 0].get_xaxis().set_ticks([])
@@ -568,10 +573,10 @@ def show_intermediate_results_BRATS(G, test_patient, save_path, all_scenarios, e
             # Question: Why is the ordering like this?
             # Answer: Check the original dataloader in dataloader.py. The "i" values are this way.
             plt.suptitle('Epoch: {}\nT1   T2   T1c   T2F\n{}   {}   {}   {}'.format(epoch,
-                                                                                      curr_scenario[0],
-                                                                                     curr_scenario[1],
-                                                                                     curr_scenario[2],
-                                                                                     curr_scenario[3]))
+                                                                                    curr_scenario[0],
+                                                                                    curr_scenario[1],
+                                                                                    curr_scenario[2],
+                                                                                    curr_scenario[3]))
 
             f.text(0.65, 0.95, pat_name)
             f.text(0.35, 0.95, "MSE: %.5f" % np.mean(G_mse_loss))
@@ -581,7 +586,7 @@ def show_intermediate_results_BRATS(G, test_patient, save_path, all_scenarios, e
             plt.savefig(os.path.join(curr_saving_directory, "".join([str(x) for x in curr_scenario]) + ".png"))
             pylab.close(f)
         del patient_numpy, patient_copy, patient
-            # plt.savefig(result_pathname + "_" + "{}".format(pat_name) + "_" + "".join([str(x) for x in curr_scenario]) + ".png", bbox_inches='tight')
+        # plt.savefig(result_pathname + "_" + "{}".format(pat_name) + "_" + "".join([str(x) for x in curr_scenario]) + ".png", bbox_inches='tight')
 
     # put the generator back to train mode
     G.train()
@@ -590,7 +595,6 @@ def show_intermediate_results_BRATS(G, test_patient, save_path, all_scenarios, e
 
 def show_intermediate_results(G, test_patient, save_path, all_scenarios, epoch, curr_scenario_range=None,
                               batch_size_to_test=5, seq_type='T1', dataset='ISLES2015'):
-
     if isinstance(test_patient, list):
         patients = test_patient
     else:
@@ -629,7 +633,7 @@ def show_intermediate_results(G, test_patient, save_path, all_scenarios, epoch, 
             SEQ_IDX = 0
         elif seq_type == 'T2':
             SEQ_IDX = 1
-        else: # this is for ISLES2015
+        else:  # this is for ISLES2015
             SEQ_IDX = 3
 
         sh = patient_numpy.shape
@@ -679,7 +683,7 @@ def show_intermediate_results(G, test_patient, save_path, all_scenarios, epoch, 
             start_slice = 0
             end_slice = 150 if sh[0] >= 150 else sh[0]
 
-            num_synthesized = 1 # WE ONLY SYNTHESIZE FLAIR
+            num_synthesized = 1  # WE ONLY SYNTHESIZE FLAIR
 
             rows = 4 + num_synthesized
             cols = (end_slice - start_slice) // slice_offset
@@ -698,7 +702,8 @@ def show_intermediate_results(G, test_patient, save_path, all_scenarios, epoch, 
                 for curr_col, curr_slice_idx in zip(range(0, cols), range(start_slice, end_slice, slice_offset)):
                     # we use patient['image'] as it contains ALL slices for the patient, not batch wise
                     axes[curr_row, curr_col].imshow(np.clip(patient_numpy[curr_slice_idx, curr_row, ...] /
-                                                            np.max(patient_numpy[curr_slice_idx, curr_row, ...]), 0.0, 1.0),
+                                                            np.max(patient_numpy[curr_slice_idx, curr_row, ...]), 0.0,
+                                                            1.0),
                                                     cmap='gray', vmin=0, vmax=1)
                     axes[curr_row, curr_col].axis('off')
                 axes[curr_row, 0].axis('on')
@@ -707,14 +712,16 @@ def show_intermediate_results(G, test_patient, save_path, all_scenarios, epoch, 
                 axes[curr_row, 0].set_ylabel(seq_names[curr_row], rotation=90, size='large')
 
             # now we plot the synthesized one
-            indices = [0] # 3 is the index for T2F, but we only have 1 index coming out of generator, so 0.
+            indices = [0]  # 3 is the index for T2F, but we only have 1 index coming out of generator, so 0.
             flair_index = 3
             for curr_row, curr_sequence_index in zip(range(4, rows),
                                                      indices):  # curr_row also controls the sequence to show
                 for curr_col, curr_slice_idx in zip(range(0, cols), range(start_slice, end_slice, slice_offset)):
                     # we use patient['image'] as it contains ALL slices for the patient, not batch wise
-                    axes[curr_row, curr_col].imshow(np.clip(G_all_slices[curr_slice_idx, curr_sequence_index,...] /
-                                                            np.max(G_all_slices[curr_slice_idx, curr_sequence_index,...]), 0.0, 1.0),
+                    axes[curr_row, curr_col].imshow(np.clip(G_all_slices[curr_slice_idx, curr_sequence_index, ...] /
+                                                            np.max(
+                                                                G_all_slices[curr_slice_idx, curr_sequence_index, ...]),
+                                                            0.0, 1.0),
                                                     cmap='gray', vmin=0, vmax=1)
                     axes[curr_row, curr_col].axis('off')
                 axes[curr_row, 0].axis('on')
@@ -749,11 +756,11 @@ def show_intermediate_results(G, test_patient, save_path, all_scenarios, epoch, 
     del G_all_slices
     return 0
 
+
 # =========================================================================================
 # Function used by original cDCGAN implementation that I based my code upon
 # =========================================================================================
-def show_result(num_epoch, show = False, save = False, path = 'result.png'):
-
+def show_result(num_epoch, show=False, save=False, path='result.png'):
     G.eval()
     test_images = G(fixed_z_, fixed_y_label_)
     G.train()
@@ -764,7 +771,7 @@ def show_result(num_epoch, show = False, save = False, path = 'result.png'):
         ax[i, j].get_xaxis().set_visible(False)
         ax[i, j].get_yaxis().set_visible(False)
 
-    for k in range(10*10):
+    for k in range(10 * 10):
         i = k // 10
         j = k % 10
         ax[i, j].cla()
@@ -779,7 +786,8 @@ def show_result(num_epoch, show = False, save = False, path = 'result.png'):
     else:
         plt.close()
 
-def show_train_hist(hist, show = False, save = False, path = 'Train_hist.png'):
+
+def show_train_hist(hist, show=False, save=False, path='Train_hist.png'):
     x = range(len(hist['D_losses']))
 
     y1 = hist['D_losses']
@@ -811,7 +819,7 @@ def create_dataloaders(parent_path='/scratch/asa224/asa224/Datasets/BRATS2018/HD
                        dataset_type='cropped',
                        load_seg=False,
                        transform_fn=[Resize(size=(256, 256)), ToTensor()],
-                        apply_normalization = True,
+                       apply_normalization=True,
                        which_normalization=None,
                        train_range=None,
                        resize_slices=148,
@@ -820,7 +828,6 @@ def create_dataloaders(parent_path='/scratch/asa224/asa224/Datasets/BRATS2018/HD
                        dataset='BRATS2018',
                        load_indices=None,
                        shuffle=False):
-
     logger.info("Setting paths")
     # train_h5path = os.path.join(parent_path, 'BRATS_Combined.h5')
     if dataset == 'BRATS2018':
@@ -830,9 +837,9 @@ def create_dataloaders(parent_path='/scratch/asa224/asa224/Datasets/BRATS2018/HD
             train_h5path = os.path.join(parent_path, 'BRATS2018.h5')
 
         if 'lgg' in dataset_name:
-            mean_var_path = os.path.join(parent_path, 'BRATS2018_HDF5_Datasetstraining_data_lgg_mean_var.p')
+            mean_var_path = os.path.join(parent_path, 'training_data_lgg_mean_std.p')
         else:
-            mean_var_path = os.path.join(parent_path, 'BRATS2018_HDF5_Datasetstraining_data_hgg_mean_var.p')
+            mean_var_path = os.path.join(parent_path, 'training_data_hgg_mean_std.p')
 
 
     elif dataset == 'BRATS2015':
@@ -890,6 +897,7 @@ def impute_reals_into_fake(x_z, fake_x, label_scenario):
 def save_checkpoint(state, filename, pickle_module):
     torch.save(state, filename, pickle_module=pickle_module)
 
+
 def load_checkpoint(model, optimizer, filename, pickle_module):
     if os.path.isfile(filename):
         logger.info("Loading checkpoint '{}'".format(filename))
@@ -899,12 +907,11 @@ def load_checkpoint(model, optimizer, filename, pickle_module):
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         logger.info("Loaded checkpoint '{}' (epoch {})"
-              .format(filename, checkpoint['epoch']))
+                    .format(filename, checkpoint['epoch']))
     else:
         logger.critical('Checkpoint {} does not exist.'.format(filename))
 
     return model, optimizer
-
 
 
 def psnr_torch(pred, gt):
@@ -912,7 +919,7 @@ def psnr_torch(pred, gt):
     epsilon = 0.00001
     epsilon2 = torch.from_numpy(np.array(0.01, dtype=np.float32))
     # always use ground truth
-    gt_n =     gt / (gt.max() + epsilon)
+    gt_n = gt / (gt.max() + epsilon)
     pred_n = pred / (pred.max() + epsilon)
 
     PIXEL_MAX = 1.0
@@ -929,17 +936,17 @@ def psnr_torch(pred, gt):
 def l2_torch(a, b):
     return torch.mean((a - b) ** 2)
 
-def calculate_metrics(G, patient_list,
-                          save_path, all_scenarios,
-                          epoch, curr_scenario_range=None,
-                          batch_size_to_test=2,
-                          impute_type=None,
-                          dataset = 'ISLES2015',
-                          convert_normalization=False,
-                            save_stats=False,
-                          mean_var_file=None,
-                      use_pytorch_ssim=False, seq_type='T1'):
 
+def calculate_metrics(G, patient_list,
+                      save_path, all_scenarios,
+                      epoch, curr_scenario_range=None,
+                      batch_size_to_test=2,
+                      impute_type=None,
+                      dataset='ISLES2015',
+                      convert_normalization=False,
+                      save_stats=False,
+                      mean_var_file=None,
+                      use_pytorch_ssim=False, seq_type='T1'):
     """
     For ISLES2015
     all_scenarios: scenarios
@@ -958,7 +965,6 @@ def calculate_metrics(G, patient_list,
     if not os.path.isdir(save_im_path):
         os.makedirs(save_im_path)
 
-
     # contains metrics for EACH slice from EACH OF THE SCENARIO. Basically everything. This is what we need for
     # ISLES2015
     running_mse = {}
@@ -975,7 +981,7 @@ def calculate_metrics(G, patient_list,
         patient_numpy = patient_copy.detach().cpu().numpy()
 
         scenarios = all_scenarios
-        all_minus_1_g = torch.ones((batch_size_to_test,1,256,256)).cuda() * -1.0
+        all_minus_1_g = torch.ones((batch_size_to_test, 1, 256, 256)).cuda() * -1.0
         all_minus_x_test_r = torch.ones((batch_size_to_test, 256, 256)).cuda() * -1.0
 
         sh = patient_numpy.shape
@@ -1126,8 +1132,6 @@ def calculate_metrics(G, patient_list,
                                 psnr_torch(G_result[:, idx_curr_label],
                                            x_test_r[:, idx_curr_label]).item())
 
-
-
     num_dict = {}
     all_mean_mse = []
     all_mean_psnr = []
@@ -1135,8 +1139,8 @@ def calculate_metrics(G, patient_list,
 
     for (mse_key, mse_list, psnr_key, psnr_list, ssim_key, ssim_list) in zip(running_mse.keys(), running_mse.values(),
                                                                              running_psnr.keys(), running_psnr.values(),
-                                                                             running_ssim.keys(), running_ssim.values()):
-
+                                                                             running_ssim.keys(),
+                                                                             running_ssim.values()):
         assert mse_key == ssim_key == psnr_key
         num_dict[mse_key] = {
             'mse': np.mean(mse_list),
@@ -1169,14 +1173,13 @@ def calculate_metrics(G, patient_list,
 
 
 def calculate_metrics_pgan(G, patient_list,
-                          save_path, all_scenarios,
-                          epoch, curr_scenario_range=None,
-                          batch_size_to_test=2,
-                          dataset = 'ISLES2015',
-                          convert_normalization=False,
-                          mean_var_file=None,
-                      use_pytorch_ssim=False, seq_type='T1'):
-
+                           save_path, all_scenarios,
+                           epoch, curr_scenario_range=None,
+                           batch_size_to_test=2,
+                           dataset='ISLES2015',
+                           convert_normalization=False,
+                           mean_var_file=None,
+                           use_pytorch_ssim=False, seq_type='T1'):
     """
     For ISLES2015
     all_scenarios: scenarios
@@ -1222,8 +1225,8 @@ def calculate_metrics_pgan(G, patient_list,
 
         # for each batch
         for _num, batch_idx in enumerate(batch_indices):
-            x_test_r = patient_image[batch_idx:batch_idx + batch_size, SEQ_IDX_SYNTH,...].unsqueeze(1).cuda()
-            x_test_z =patient_image[batch_idx:batch_idx + batch_size, SEQ_IDX,...].unsqueeze(1).cuda()
+            x_test_r = patient_image[batch_idx:batch_idx + batch_size, SEQ_IDX_SYNTH, ...].unsqueeze(1).cuda()
+            x_test_z = patient_image[batch_idx:batch_idx + batch_size, SEQ_IDX, ...].unsqueeze(1).cuda()
 
             G_result = G(x_test_z)
             ssim = pyt_ssim.ssim
