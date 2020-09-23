@@ -1,6 +1,10 @@
-# MM-GAN: Missing MRI Pulse Sequence Synthesis using Multi-Modal Generative Adversarial Network 
+Reimplement of mm-gan.
 
-This repository contains source code for MM-GAN: [Missing MRI Pulse Sequence Synthesis using Multi-Modal Generative Adversarial Network](https://ieeexplore.ieee.org/document/8859286). MM-GAN is a novel GAN-based approach that allows synthesizing missing pulse sequences (modalities) for an MRI scan. For more details, please refer to the paper. 
+The origin implement can be seen in [https://github.com/trane293/mm-gan](https://github.com/trane293/mm-gan)
+
+Related article: [Missing MRI Pulse Sequence Synthesis using Multi-Modal Generative Adversarial Network](https://ieeexplore.ieee.org/document/8859286). 
+
+MM-GAN is a novel GAN-based approach that allows synthesizing missing pulse sequences (modalities) for an MRI scan. For more details, please refer to the paper. 
 
 To cite the paper (IEEE TMI):
 ```
@@ -14,7 +18,7 @@ To cite the paper (IEEE TMI):
   pages={1170-1183},}
 ```
 
-To cite this repository:
+To cite the origin repository:
 ```
 @misc{Sharma20Code,
   author = {A. {Sharma}},
@@ -37,23 +41,13 @@ conda env create -f environment.yml
 Download BRATS2018 dataset from the official website https://www.med.upenn.edu/sbia/brats2018/data.html and extract both the Training and Validation zip files to a folder, say:
 
 ```
-/local-scratch/data/BRATS2018/Training/
-    /local-scratch/data/BRATS2018/Training/HGG
-    /local-scratch/data/BRATS2018/Training/LGG
+data/BRATS2018/Training/
+    data/BRATS2018/Training/HGG
+    data/BRATS2018/Training/LGG
 ```
 Validation patients do not have HGG/LGG labels. 
 ```
-/local-scratch/data/BRATS2018/Validation/
-```
-
-Open `modules/configfile.py` and change the following paths to match your folder structure:
-
-```
-config['data_dir_prefix'] = os.path.join(mount_path_prefix, 'BRATS2018_Full/') # this should be top level path
-config['hdf5_filepath_prefix'] = os.path.join(mount_path_prefix, 'BRATS2018/HDF5_Datasets/BRATS2018_Unprocessed.h5') # top level path
-config['hdf5_filepath_prefix_2017'] = os.path.join(mount_path_prefix, 'scratch/asa224/Datasets/BRATS2017/HDF5_Datasets/BRATS.h5') # top level path
-config['hdf5_combined'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS_Combined_Unprocessed.h5')
-config['hdf5_filepath_cropped'] = os.path.join(mount_path_prefix, 'BRATS2018/HDF5_Datasets/BRATS2018_Cropped_Normalized_Unprocessed.h5') # top level path
+data/BRATS2018/Validation/
 ```
 
 Once done, switch to the conda virtualenv, and run:
