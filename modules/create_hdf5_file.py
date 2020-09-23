@@ -64,7 +64,9 @@ def createHDF5File(config):
     """
 
     # w- mode fails when there is a file already.
-    hdf5_file = h5py.File(config['hdf5_filepath_prefix'], mode='w')
+    if not config['path_hdf5_unprocessed'].parent.exists():
+        config['path_hdf5_unprocessed'].parent.mkdir(parents=True)
+    hdf5_file = h5py.File(config['path_hdf5_unprocessed'], mode='w')
 
     # create a new parent directory to hold the data inside it
     grp = hdf5_file.create_group("original_data")
@@ -98,56 +100,49 @@ def main():
     hdf5_file.create_dataset("validation_data", config['val_shape'], np.float32)
     hdf5_file.create_dataset("validation_data_pat_name", (config['val_shape'][0],), dtype="S100")
 
-    for dataset_splits in glob.glob(os.path.join(config['data_dir_prefix'], '*')): # Training/Validation data?
-        if os.path.isdir(dataset_splits) and 'Validation' in dataset_splits: # make sure its a directory
+    for dataset_splits in config['pathd_src'].iterdir(): # Training/Validation data?
+        if dataset_splits.is_dir() and 'Validation' in dataset_splits.name: # make sure its a directory
             # VALIDATION data handler
             logger.info('currently loading Validation data.')
             count = 0
             # validation data does not have HGG and LGG distinctions
-            for images, pats in dataloader.loadDataGenerator(dataset_splits,
-                                         batch_size=config['batch_size'], loadSurvival=False, csvFilePath=None,
+            for images, paths_pat in dataloader.loadDataGenerator(dataset_splits,
+                                         loadSurvival=False, csvFilePath=None,
                                          loadSeg=False, preprocess=PREPROCESS_DATA):
-                hdf5_file['validation_data'][count:count+config['batch_size'],...] = images
-                t = 0
+                hdf5_file['validation_data'][count] = images
+                hdf5_file['validation_data_pat_name'][count] = paths_pat.name.encode('utf-8')
 
-                for i in range(count, count + config['batch_size']):
-                    hdf5_file['validation_data_pat_name'][i] = pats[t].split('/')[-1].encode('utf-8')
-                    t += 1
 
                 # logger.debug('array equal?: {}'.format(np.array_equal(hdf5_file['validation_data'][count:count+config['batch_size'],...], images)))
-                logger.info('loaded {} patient(s) from {}'.format(count + config['batch_size'], dataset_splits))
-                count += config['batch_size']
+                # logger.info('loaded {} patient(s) from {}'.format(count + config['batch_size'], dataset_splits))
+                count += 1
 
         else:
         # TRAINING data handler
-            if os.path.isdir(dataset_splits) and 'Training' in dataset_splits:
-                for grade_type in glob.glob(os.path.join(dataset_splits, '*')):
+            if dataset_splits.is_dir() and 'Training' in dataset_splits.name:
+                for grade_type in dataset_splits.iterdir():
                     # there may be other files in there (like the survival data), ignore them.
-                    if os.path.isdir(grade_type):
+                    if grade_type.is_dir():
                         count = 0
                         logger.info('currently loading Training data.')
-                        for images, segmasks, pats in dataloader.loadDataGenerator(grade_type,
-                                                            batch_size=config['batch_size'], loadSurvival=False,
+                        for images, segmask, paths_pat in dataloader.loadDataGenerator(grade_type,
+                                                            loadSurvival=False,
                                                             csvFilePath=None, loadSeg=True,
                                                             preprocess=PREPROCESS_DATA):
-                            logger.info('loading patient {} from {}'.format(count, grade_type))
-                            if 'HGG' in grade_type:
-                                hdf5_file['training_data_hgg'][count:count+config['batch_size'],...] = images
-                                hdf5_file['training_data_segmasks_hgg'][count:count+config['batch_size'], ...] = segmasks
-                                t = 0
-                                for i in range(count, count + config['batch_size']):
-                                    hdf5_file['training_data_hgg_pat_name'][i] = pats[t].split('/')[-1].encode('utf-8')
-                                    t += 1
-                            elif 'LGG' in grade_type:
-                                hdf5_file['training_data_lgg'][count:count+config['batch_size'], ...] = images
-                                hdf5_file['training_data_segmasks_lgg'][count:count+config['batch_size'], ...] = segmasks
-                                t = 0
-                                for i in range(count, count + config['batch_size']):
-                                    hdf5_file['training_data_lgg_pat_name'][i] = pats[t].split('/')[-1].encode('utf-8')
-                                    t += 1
+                            logger.info('loading patient {} from {}'.format(paths_pat.name, grade_type))
+                            if 'HGG' in grade_type.name:
+                                hdf5_file['training_data_hgg'][count] = images
+                                hdf5_file['training_data_segmasks_hgg'][count] = segmask
+                                hdf5_file['training_data_hgg_pat_name'][count] = paths_pat.name.encode('utf-8')
 
-                            logger.info('loaded {} patient(s) from {}'.format(count + config['batch_size'], grade_type))
-                            count += config['batch_size']
+                            elif 'LGG' in grade_type.name:
+                                hdf5_file['training_data_lgg'][count] = images
+                                hdf5_file['training_data_segmasks_lgg'][count] = segmask
+                                hdf5_file['training_data_lgg_pat_name'][count] = paths_pat.name.encode('utf-8')
+                            count += 1
+
+                        logger.info('loaded {} patient(s) from {}'.format(count, grade_type))
+
     # close the HDF5 file
     hdf5_file_main.close()
 

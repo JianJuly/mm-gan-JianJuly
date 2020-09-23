@@ -59,9 +59,9 @@ logger.warning('[IMPORTANT] The code DOES NOT APPLY mean/var normalization, rath
 logger.info('opening previously generated HDF5 file.')
 
 # open the existing datafile
-hdf5_file_main = h5py.File(config['hdf5_filepath_prefix'], 'r')
+hdf5_file_main = h5py.File(str(config['path_hdf5_unprocessed']), 'r')
 
-logger.info('opened HDF5 file at {}'.format(config['hdf5_filepath_prefix']))
+logger.info('opened HDF5 file at {}'.format(str(config['path_hdf5_unprocessed'])))
 
 # get the group identifier for original dataset
 hdf5_file = hdf5_file_main['original_data']
@@ -72,8 +72,7 @@ hdf5_file = hdf5_file_main['original_data']
 # create new HDF5 file to hold cropped data.
 # ------------------------------------------------------------------------------------
 logger.info('creating new HDF5 dataset to hold cropped/normalized data')
-filename = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS2018_Cropped.h5')
-# filename = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS_Cropped_Normalized_Unprocessed.h5')
+filename = str(config['pathd_hdf5files']/'BRATS2018_Cropped.h5')
 new_hdf5 = h5py.File(filename, mode='w')
 logger.info('created new database at {}'.format(filename))
 
@@ -106,46 +105,47 @@ new_group_preprocessed['validation_data_pat_name'][:] = hdf5_file['validation_da
 # get the  file  where mean/var values are stored
 # TODO: Use the config file global path, not this one.
 
-saveMeanVarFilename = os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1])
 logging.info('starting the Cropping/Normalization process.')
 
-# only run thecropping steps on these datasets
-run_on_list = ['training_data_segmasks_hgg', 'training_data_hgg', 'training_data_lgg', 'training_data_segmasks_lgg', 'validation_data']
+# only run the cropping steps on these datasets
+list_crop = ['training_data_segmasks_hgg', 'training_data_hgg', 'training_data_lgg', 'training_data_segmasks_lgg', 'validation_data']
 
 #only run the mean/var normalization on these datasets
-std_list = ['training_data_hgg', 'training_data_lgg']
-for run_on in run_on_list:
+list_std = ['training_data_hgg', 'training_data_lgg']
+
+for cohort in list_crop:
 
     # we define the final shape after cropping in the config file to make it easy to access. More information available in
     # checkLargestCropSize.ipynb notebook.
-    if run_on == 'training_data_hgg':
+    if cohort == 'training_data_hgg':
         im_np = np.empty(config['train_shape_hgg_crop'])
-    elif run_on == 'training_data_lgg':
+    elif cohort == 'training_data_lgg':
         im_np = np.empty(config['train_shape_lgg_crop'])
-    elif run_on == 'validation_data':
+    elif cohort == 'validation_data':
         im_np = np.empty(config['val_shape_crop'])
 
-    logger.info('Running on {}'.format(run_on))
-    for i in range(0, hdf5_file[run_on].shape[0]):
+    logger.info('Running on {}'.format(cohort))
+    for i in range(0, hdf5_file[cohort].shape[0]):
         # cropping operation
-        logger.debug('{}:- Patient {}'.format(run_on, i+1))
-        im = hdf5_file[run_on][i]
-        m = config['cropping_coords']
-        if 'segmasks' in run_on:
+        logger.debug('{}:- Patient {}'.format(cohort, i + 1))
+        img_src = hdf5_file[cohort][i]
+        coords = config['cropping_coords']
+        if 'segmasks' in cohort:
             # there are no channels for segmasks
-            k = im[m[0]:m[1], m[2]:m[3], m[4]:m[5]]
+            img_dst = img_src[coords[0]:coords[1], coords[2]:coords[3], coords[4]:coords[5]]
         else:
-            k = im[:, m[0]:m[1], m[2]:m[3], m[4]:m[5]]
+            img_dst = img_src[:, coords[0]:coords[1], coords[2]:coords[3], coords[4]:coords[5]]
 
-        if run_on in std_list:
+        if cohort in list_std:
             # save the image to this numpy array
-            im_np[i] = k
-        new_group_preprocessed[run_on][i] = k
+            im_np[i] = img_dst
+            print(img_src.max(), img_dst.max())
+        new_group_preprocessed[cohort][i] = img_dst
     # find mean and standard deviation, and apply to data. Also write the mean/std values to disk
-    if run_on in std_list:
-        logger.info('The dataset {} needs standardization'.format(run_on))
-        _tmp, vals = standardize(im_np, findMeanVarOnly=True, saveDump=saveMeanVarFilename + '/' + run_on + '_mean_std.p')
-        logging.info('Calculated normalization values for {}:\n{}'.format(run_on, vals))
+    if cohort in list_std:
+        logger.info('The dataset {} needs standardization'.format(cohort))
+        _tmp, vals = standardize(im_np, findMeanVarOnly=True, saveDump=(config['pathd_hdf5files']/(cohort + '_mean_std.p')))
+        logging.info('Calculated normalization values for {}:\n{}'.format(cohort, vals))
         del im_np
 
 # ====================================================================================

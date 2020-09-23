@@ -67,7 +67,7 @@ def preprocessData(img_obj, process=False):
         return output
 
 
-def loadDataGenerator(data_dir, batch_size=1, preprocess=False, loadSurvival=False,
+def loadDataGenerator(data_dir, preprocess=False, loadSurvival=False,
                       csvFilePath=None, loadSeg=True):
     """
     Main function to load BRATS 2017 dataset.
@@ -80,20 +80,18 @@ def loadDataGenerator(data_dir, batch_size=1, preprocess=False, loadSurvival=Fal
     :return:
     """
 
-    patID = 0  # used to keep count of how many patients loaded already.
     num_sequences = 4  # number of sequences in the data. BRATS has 4.
     num_slices = config['num_slices']
-    running_pats = []
     out_shape = config['spatial_size_for_training']  # shape of the training data
 
     # create placeholders, currently only supports theano type convention (num_eg, channels, x, y, z)
-    images = np.empty((batch_size, num_sequences, out_shape[0], out_shape[1], num_slices)).astype(np.int16)
-    labels = np.empty((batch_size, 1)).astype(np.int16)
+    images = np.empty((num_sequences, out_shape[0], out_shape[1], num_slices)).astype(np.int16)
+    labels = np.empty((1)).astype(np.int16)
     slices = None  # not used anymore
 
     if loadSeg == True:
         # create placeholder for the segmentation mask
-        seg_masks = np.empty((batch_size, out_shape[0], out_shape[1], num_slices)).astype(np.int16)
+        seg_mask = np.empty((out_shape[0], out_shape[1], num_slices)).astype(np.int16)
 
     csv_flag = 0
 
@@ -108,37 +106,22 @@ def loadDataGenerator(data_dir, batch_size=1, preprocess=False, loadSurvival=Fal
             logger.debug('loadSurvival is True but no csvFilePath provided!')
             raise Exception
 
-    batch_id = 1  # counter for batches loaded
     logger.info('starting to load images..')
-    for patients in glob.glob(data_dir + '/*'):
-        if os.path.isdir(patients):
-            logger.debug('{} is a directory.'.format(patients))
-
-            # save the name of the patient
-            running_pats.append(patients)
-            if csv_flag == 1:
-                patName = patients.split('/')[-1]
-                try:
-                    labels[patID] = csv_file[csv_file['Brats17ID'] == patName]['Survival'].tolist()[0]
-                    logger.debug('Added survival data..')
-                except IndexError:
-                    labels[patID] = None
-
-            # this hacky piece of code is to reorder the filenames, so that segmentation file is always at the end.
-            # get all the filepaths
-            files = glob.glob(patients + '/*')
+    for path_pat in data_dir.iterdir():
+        if path_pat.is_dir():
+            logger.debug('{} is a directory.'.format(path_pat.name))
 
             # create list without the "seg" filepath inside it
-            files_new = [x for x in files if 'seg' not in x]
+            paths_seqs = [x for x in path_pat.iterdir() if 'seg' not in x.stem]
 
             # create another list with only seg folder inside it
-            seg_filename = [x for x in files if 'seg' in x]
-            if seg_filename != []:
+            paths_segs = [x for x in path_pat.iterdir() if 'seg' in x.stem]
+            if paths_segs != []:
                 # concatenate the list, now the seg filepath is at the end
-                files_new = files_new + seg_filename
+                paths_seqs = paths_seqs + paths_segs
 
-            for imagefile in files_new:  # get the filepath of the image (nii.gz)
-                if 'seg' in imagefile:
+            for path_file in paths_seqs:  # get the filepath of the image (nii.gz)
+                if 'seg' in path_file.stem:
                     if loadSeg == True:
                         logger.debug('loading segmentation for this patient..')
 
@@ -147,57 +130,50 @@ def loadDataGenerator(data_dir, batch_size=1, preprocess=False, loadSurvival=Fal
                         # implemented in SITK for their own object type. We can leverage those functions if we preserve
                         # the image object.
 
-                        img_obj = sitk.ReadImage(imagefile)
-                        pix_data = sitk.GetArrayViewFromImage(img_obj)
+                        img = sitk.ReadImage(str(path_file))
+                        array = sitk.GetArrayViewFromImage(img)
 
                         # check Practice - SimpleiTK.ipynb notebook for more info on why this swapaxes operation is req
-                        pix_data_swapped = np.swapaxes(pix_data, 0, 1)
+                        pix_data_swapped = np.swapaxes(array, 0, 1)
                         pix_data_swapped = np.swapaxes(pix_data_swapped, 1, 2)
 
-                        seg_masks[patID, :, :, :] = pix_data_swapped
+                        seg_mask[:, :, :] = pix_data_swapped
                     else:
                         continue
                 else:
                     # this is to ensure that each channel stays at the same place
-                    if 't1.' in imagefile:
+                    if 't1.' in path_file.name:
                         i = 0
                         seq_name = 't1'
-                    elif 't2.' in imagefile:
+                    elif 't2.' in path_file.name:
                         i = 1
                         seq_name = 't2'
-                    elif 't1ce.' in imagefile:
+                    elif 't1ce.' in path_file.name:
                         i = 2
                         seq_name = 't1ce'
-                    elif 'flair.' in imagefile:
+                    elif 'flair.' in path_file.name:
                         i = 3
                         seq_name = 'flair'
 
-                    img_obj = sitk.ReadImage(imagefile)
+                    img = sitk.ReadImage(str(path_file))
                     if preprocess == True:
                         logger.debug('performing N4ITK Bias Field Correction on {} modality'.format(seq_name))
-                    img_obj = preprocessData(img_obj, process=preprocess)
+                    img = preprocessData(img, process=preprocess)
 
-                    pix_data = sitk.GetArrayViewFromImage(img_obj)
+                    array = sitk.GetArrayViewFromImage(img)
 
-                    pix_data_swapped = np.swapaxes(pix_data, 0, 1)
+                    pix_data_swapped = np.swapaxes(array, 0, 1)
                     pix_data_swapped = np.swapaxes(pix_data_swapped, 1, 2)
 
-                    images[patID, i, :, :, :] = pix_data_swapped
+                    images[i, :, :, :] = pix_data_swapped
 
-            patID += 1
+            if csv_flag == 1 and loadSeg == True:
+                yield images, labels, seg_mask, path_pat
+            elif csv_flag == 0 and loadSeg == True:
+                yield images, seg_mask, path_pat
+            elif csv_flag == 0 and loadSeg == False:
+                yield images, path_pat
 
-            if batch_id % batch_size == 0:
-                patID = 0
-                if csv_flag == 1 and loadSeg == True:
-                    yield images, labels, seg_masks, running_pats
-                elif csv_flag == 0 and loadSeg == True:
-                    yield images, seg_masks, running_pats
-                elif csv_flag == 0 and loadSeg == False:
-                    yield images, running_pats
-
-                running_pats = []
-
-            batch_id += 1
 
 
 def standardize(images, findMeanVarOnly=True, saveDump=None, applyToTest=None):

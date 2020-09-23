@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import h5py as h5py
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -105,10 +107,10 @@ class BrainMRIData(Dataset):
                                     'training_data_pat_name',
                                     'training_data_segmasks']
 
-        if h5path is None:
+        if not h5path.exists():
             raise ValueError("Please specify the path for the HDF5 file")
 
-        if mean_var_path is None:
+        if not mean_var_path.exists():
             raise ValueError("Please specify the path for the mean/var file")
 
         if parent_name is None or \
@@ -148,9 +150,9 @@ class BrainMRIData(Dataset):
                 # normalization. Hence find those patients, and remove them from intensity max calculation
                 # curr_max = {0: 0, 1: 0, 2: 0, 3: 0}
                 # for i in train_range:
-                #     for m in range(0, 4):
-                #         if (not self.xdataset[i, m].max() > 30000.0) and (self.xdataset[i, m].max() >= curr_max[m]):
-                #             curr_max[m] = self.xdataset[i, m].max()
+                #     for coords in range(0, 4):
+                #         if (not self.xdataset[i, coords].max() > 30000.0) and (self.xdataset[i, coords].max() >= curr_max[coords]):
+                #             curr_max[coords] = self.xdataset[i, coords].max()
 
                 # typically BRATS uses 12 bits (all dicoms do), but there  are like
                 self.x_max = {0: 4096.0, 1: 4096.0, 2: 4096.0, 3: 4096.0}
@@ -246,8 +248,8 @@ class BrainMRIData(Dataset):
                     im[k, m, ...] = (im[k, m, ...] / np.mean(im[k, m, ...]))
             else:
                 # remove clipping
-                # if im[m, ...].min() != 0.0:
-                #     im[m, ...] = np.clip(im[m, ...], a_min=0.0, a_max=np.max(im[m, ...]))
+                # if img_src[coords, ...].min() != 0.0:
+                #     img_src[coords, ...] = np.clip(img_src[coords, ...], a_min=0.0, a_max=np.max(img_src[coords, ...]))
 
                 im[m, ...] = (im[m, ...] / np.mean(im[m, ...]))
 
@@ -256,7 +258,7 @@ class BrainMRIData(Dataset):
     def apply_tanh_normalization(self, im, max_val=None):
         im = self.apply_mean_std(im, self.mean_var_file)
         # make sure there are no negative entries
-        # im[im < 0] = 0.0
+        # img_src[img_src < 0] = 0.0
 
         for m in range(0, 4):
             if len(im.shape) > 4:
@@ -812,7 +814,7 @@ def show_train_hist(hist, show=False, save=False, path='Train_hist.png'):
         plt.close()
 
 
-def create_dataloaders(parent_path='/scratch/asa224/asa224/Datasets/BRATS2018/HDF5_Datasets/',
+def create_dataloaders(pathd_hdf5files=Path('data/BRATS2018/HDF5_Datasets'),
                        parent_name='preprocessed',
                        dataset_name='training_data_hgg',
                        load_pat_names=True,
@@ -829,46 +831,45 @@ def create_dataloaders(parent_path='/scratch/asa224/asa224/Datasets/BRATS2018/HD
                        load_indices=None,
                        shuffle=False):
     logger.info("Setting paths")
-    # train_h5path = os.path.join(parent_path, 'BRATS_Combined.h5')
+    # path_hdf5file_train = os.path.join(pathd_hdf5files, 'BRATS_Combined.h5')
     if dataset == 'BRATS2018':
         if dataset_type == 'cropped':
-            train_h5path = os.path.join(parent_path, 'BRATS2018_Cropped.h5')
+            path_hdf5file_train = pathd_hdf5files / 'BRATS2018_Cropped.h5'
         else:
-            train_h5path = os.path.join(parent_path, 'BRATS2018.h5')
+            path_hdf5file_train = pathd_hdf5files / 'BRATS2018.h5'
 
         if 'lgg' in dataset_name:
-            mean_var_path = os.path.join(parent_path, 'training_data_lgg_mean_std.p')
+            path_normvalue_file = pathd_hdf5files/'training_data_lgg_mean_std.p'
         else:
-            mean_var_path = os.path.join(parent_path, 'training_data_hgg_mean_std.p')
-
+            path_normvalue_file =pathd_hdf5files/'training_data_hgg_mean_std.p'
 
     elif dataset == 'BRATS2015':
         if dataset_type == 'cropped':
-            train_h5path = os.path.join(parent_path, 'BRATS2015_Cropped.h5')
+            path_hdf5file_train = os.path.join(pathd_hdf5files, 'BRATS2015_Cropped.h5')
         else:
-            train_h5path = os.path.join(parent_path, 'BRATS2015.h5')
+            path_hdf5file_train = os.path.join(pathd_hdf5files, 'BRATS2015.h5')
 
         # Only use the LGG data as per the experiment design. It's actually mean and var, not std. Ignore the name
-        mean_var_path = os.path.join(parent_path, 'HDF5_Datasetstraining_data_lgg_mean_std.p')
+        path_normvalue_file = os.path.join(pathd_hdf5files, 'HDF5_Datasetstraining_data_lgg_mean_std.p')
 
     elif dataset == 'ISLES2015':
         if dataset_type == 'cropped':
-            train_h5path = os.path.join(parent_path, 'ISLES2015_Cropped.h5')
+            path_hdf5file_train = os.path.join(pathd_hdf5files, 'ISLES2015_Cropped.h5')
         else:
-            train_h5path = os.path.join(parent_path, 'ISLES2015.h5')
+            path_hdf5file_train = os.path.join(pathd_hdf5files, 'ISLES2015.h5')
 
         # only using SISS data. It's actually mean and var, not std. Ignore the name
-        mean_var_path = os.path.join(parent_path, 'HDF5_Datasetstraining_data_mean_std.p')
+        path_normvalue_file = os.path.join(pathd_hdf5files, 'HDF5_Datasetstraining_data_mean_std.p')
 
     logger.debug('Using the following paths:')
-    logger.debug('train_h5_path: {}'.format(train_h5path))
-    logger.debug('mean_var_path: {}'.format(mean_var_path))
+    logger.debug('path_hdf5file_train: {}'.format(str(path_hdf5file_train)))
+    logger.debug('path_normvalue_file: {}'.format(str(path_normvalue_file)))
 
     transform = transforms.Compose(transform_fn)
 
     # build loader object
     logger.info("Build loader object")
-    loader = BrainMRIData(train_h5path, mean_var_path, parent_name,
+    loader = BrainMRIData(path_hdf5file_train, path_normvalue_file, parent_name,
                           dataset_name, load_pat_names,
                           load_seg, transform, apply_normalization=apply_normalization,
                           which_normalization=which_normalization,
@@ -1132,6 +1133,8 @@ def calculate_metrics(G, patient_list,
                                 psnr_torch(G_result[:, idx_curr_label],
                                            x_test_r[:, idx_curr_label]).item())
 
+                            if np.isnan(running_mse[curr_scenario_str][-1]):
+                                print('ccc')
     num_dict = {}
     all_mean_mse = []
     all_mean_psnr = []

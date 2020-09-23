@@ -1,5 +1,7 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
+from pathlib import Path
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import argparse
 from modules.advanced_gans.models import *
 from torch.autograd import Variable
@@ -37,7 +39,7 @@ parser.add_argument('--n_epochs', type=int, default=60, help='number of epochs o
 parser.add_argument('--dataset', type=str, default="BRATS2018", help='name of the dataset')
 parser.add_argument('--grade', type=str, default="LGG", help='grade of tumor to train on')
 parser.add_argument('--path_prefix', type=str, default="", help='path prefix to choose')
-parser.add_argument('--batch_size', type=int, default=74, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=4, help='size of the batches')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
@@ -70,8 +72,7 @@ elif 'debug' in opt.log_level:
 # =============================================================================
 # Create Training and Validation data loaders
 # =============================================================================
-
-parent_path = 'data/{}/HDF5_Datasets/'.format(opt.dataset)
+pathd_hdf5files = Path('data')/opt.dataset/'HDF5_Datasets'
 
 if opt.dataset == 'BRATS2018':
     if opt.grade == 'HGG':
@@ -96,7 +97,7 @@ else:
     logger.critical("Invalid dataset name: {}".format(opt.dataset))
     sys.exit(-1)
 
-logger.debug('\tparent_path: \t\t{}'.format(parent_path))
+logger.debug('\tpathd_hdf5files: \t\t{}'.format(pathd_hdf5files))
 logger.debug('\tparent_name: \t\t{}'.format(parent_name))
 logger.debug('\tdataset_name: \t\t{}'.format(dataset_name))
 logger.debug('\tdataset_type: \t\t{}'.format(dataset_type))
@@ -114,25 +115,25 @@ if opt.use_tanh:
 else:
     which_normalization = None
 
-n_dataloader, dataloader_for_viz = create_dataloaders(parent_path=parent_path,
-                               parent_name=parent_name,
-                               dataset_name=dataset_name,
-                                dataset_type=dataset_type,
-                               load_pat_names=True,
-                               load_seg=False,
-                               transform_fn=[Resize(size=(opt.img_height, opt.img_width)), ToTensor()],
-                               apply_normalization=True,
-                               which_normalization=which_normalization,
-                               resize_slices=resize_slices,
-                               get_viz_dataloader=True,
-                               num_workers=opt.n_cpu,
-                               load_indices=None,
-                               dataset=opt.dataset,
-                               shuffle=False)
+n_dataloader, dataloader_for_viz = create_dataloaders(pathd_hdf5files=pathd_hdf5files,
+                                                      parent_name=parent_name,
+                                                      dataset_name=dataset_name,
+                                                      dataset_type=dataset_type,
+                                                      load_pat_names=True,
+                                                      load_seg=False,
+                                                      transform_fn=[Resize(size=(opt.img_height, opt.img_width)), ToTensor()],
+                                                      apply_normalization=True,
+                                                      which_normalization=which_normalization,
+                                                      resize_slices=resize_slices,
+                                                      get_viz_dataloader=True,
+                                                      num_workers=opt.n_cpu,
+                                                      load_indices=None,
+                                                      dataset=opt.dataset,
+                                                      shuffle=False)
 
 test_patient = []
 for k in range(0, opt.test_pats):
-    test_patient.append(dataloader_for_viz.getitem_via_index(opt.train_patient_idx + k)) # tehre should be no +1
+    test_patient.append(dataloader_for_viz.getitem_via_index(opt.train_patient_idx + k)) # there should be no +1
 
 # if train_pat = 200
 # The testing loop will evaluate at train_idx = 199 since the condition is train_idx + 1 == opt.train_patient_idx
@@ -175,21 +176,12 @@ discriminator = Discriminator(in_channels=opt.channels, dataset='BRATS2018')
 # =============================================================================
 # Where to save results
 # =============================================================================
-
-if opt.path_prefix == "":
-    root = 'checkpoints/'
-else: # NOT USED
-    root = os.path.join(opt.path_prefix, 'rrg_proj_dir/Results/project_880_new/mm_synthesis_gan_results/')
-    logger.warning("root: {}".format(root))
-    logger.warning('Possible bad value for opt.path_prefix')
-
 model = opt.model_name
-if not os.path.isdir(root):
-    os.mkdir(root)
-if not os.path.isdir(os.path.join(root, model)):
-    os.mkdir(os.path.join(root, model))
-if not os.path.isdir(os.path.join(root, model, "{}".format(opt.dataset), 'scenario_results')):
-    os.makedirs(os.path.join(root, model, "{}".format(opt.dataset), 'scenario_results'))
+pathd_checkpoints = Path('checkpoints')
+pathd_model = pathd_checkpoints/model
+pathd_scenario_results = pathd_model/opt.dataset/'scenario_results'
+if not pathd_scenario_results.exists():
+    pathd_scenario_results.mkdir(parents=True)
 # =============================================================================
 
 # Optimizers
@@ -210,11 +202,11 @@ if cuda:
 if opt.epoch != 0:
     # Load pretrained models
     logger.info('Loading previous checkpoint!')
-    generator, optimizer_G = load_checkpoint(generator, optimizer_G, os.path.join(root, opt.model_name,
+    generator, optimizer_G = load_checkpoint(generator, optimizer_G, os.path.join(pathd_checkpoints, opt.model_name,
                                                                                   "{}_param_{}_{}.pkl".format(
                                                                                       'generator', opt.model_name,
                                                                                       opt.epoch)), pickle_module=pickle)
-    discriminator, optimizer_D = load_checkpoint(discriminator, optimizer_D, os.path.join(root, opt.model_name,
+    discriminator, optimizer_D = load_checkpoint(discriminator, optimizer_D, os.path.join(pathd_checkpoints, opt.model_name,
                                                                                           "{}_param_{}_{}.pkl".format(
                                                                                               'discriminator',
                                                                                               opt.model_name,
@@ -251,6 +243,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Create all scenrios: Total will 15, but remove 0000 and 1111
 scenarios = list(map(list, itertools.product([0, 1], repeat=4)))
+# remove the empty scenario and all available scenario
+scenarios.remove([0,0,0,0])
+scenarios.remove([1,1,1,1])
 
 # Generate new label placeholders for this particular batch
 # This is for the G (Changed below)
@@ -263,10 +258,6 @@ label_list = torch.from_numpy(np.ones((opt.batch_size,
                                        patch[0],
                                        patch[1],
                                        patch[2]))).cuda().type(torch.cuda.FloatTensor)
-
-# remove the empty scenario and all available scenario
-scenarios.remove([0,0,0,0])
-scenarios.remove([1,1,1,1])
 
 # sort the scenarios according to decreasing difficulty. Easy scenarios last, and difficult ones first.
 scenarios.sort(key=lambda x: x.count(1))
@@ -292,9 +283,9 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
         logger.info("Current idx_pat: {}".format(idx_pat))
         # if idx_pat > opt.train_patient_idx:
         #     logger.info("Now testing on patient {}".format(opt.train_patient_idx + 1))
-        #     main_path = os.path.join(root, model, 'scenario_results')
+        #     main_path = os.path.join(pathd_checkpoints, model, 'scenario_results')
         #
-        #     fixed_p = os.path.join(root, model, 'scenario_results', 'viz' + "_" + str(epoch + 1))
+        #     fixed_p = os.path.join(pathd_checkpoints, model, 'scenario_results', 'viz' + "_" + str(epoch + 1))
         #
         #     logger.info("Saving result as {}".format(fixed_p))
         #     status = show_intermediate_results(generator, test_patient, save_path=main_path,
@@ -484,19 +475,17 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
             # Check if we have trained with exactly opt.train_patient_idx patients (if opt.train_patient_idx is 10, then idx_pat will be 9, so this condition will evaluate to true
         if idx_pat + 1 == opt.train_patient_idx:
             logger.info('Testing on test set for this fold')
-            main_path = os.path.join(root, model, "{}".format(opt.dataset), 'scenario_results')
-
-            logger.info("Saving results at {}".format(main_path))
+            logger.info("Saving results at {}".format(str(pathd_scenario_results)))
 
             generator.eval()
 
             logger.info("Calculating metric on test set")
             result_dict_test, _running_mse, _running_psnr, _running_ssim = calculate_metrics(
-                                                 generator, test_patient, save_path=main_path,
+                                                 generator, test_patient, save_path=str(pathd_scenario_results),
                                                  all_scenarios=copy.deepcopy(scenarios),
                                                  epoch=epoch, save_stats=True,
                                                  curr_scenario_range=None,
-                                                 batch_size_to_test=1,
+                                                 batch_size_to_test=37, #1
                                                 impute_type=opt.z_type,
                                                 dataset=opt.dataset)
 
@@ -542,14 +531,14 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
         'optimizer': optimizer_D.state_dict(),
     }
 
-    save_checkpoint(gen_state_checkpoint, os.path.join(root, model, 'generator_param_{}_{}.pkl'.format(model, epoch + 1)),
+    save_checkpoint(gen_state_checkpoint, os.path.join(pathd_checkpoints, model, 'generator_param_{}_{}.pkl'.format(model, epoch + 1)),
                     pickle_module=pickle)
 
     save_checkpoint(des_state_checkpoint,
-                    os.path.join(root, model, 'discriminator_param_{}_{}.pkl'.format(model, epoch + 1)),
+                    os.path.join(pathd_checkpoints, model, 'discriminator_param_{}_{}.pkl'.format(model, epoch + 1)),
                     pickle_module=pickle)
 
-    with open(os.path.join(root, model, "{}".format(opt.dataset),
+    with open(os.path.join(pathd_checkpoints, model, "{}".format(opt.dataset),
                            'result_dict_test_epoch_{}.pkl'.format(epoch)), 'wb') as f:
         pickle.dump(result_dict_test, f)
 
@@ -576,5 +565,5 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
     print("Avg one epoch ptime: %.2f, total %d epochs ptime: %.2f" % (
     torch.mean(torch.FloatTensor(train_hist['per_epoch_ptimes'])), opt.n_epochs, total_ptime))
 
-with open(os.path.join(root, model, 'train_hist.pkl'), 'wb') as f:
+with open(os.path.join(pathd_checkpoints, model, 'train_hist.pkl'), 'wb') as f:
     pickle.dump(train_hist, f)

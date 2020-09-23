@@ -23,38 +23,34 @@ LICENCE: Proprietary for now.
 """
 import os
 import platform
+from pathlib import Path
 
 # WE CAN USE THIS TO CHANGE IMAGE_DATA_FORMAT on the fly
 # keras.backend.common._IMAGE_DATA_FORMAT='channels_first'
 
-# to make the code portable even on cedar,you need to add conditions here
-node_name = platform.node()
-if node_name == 'XPS15':
-    # this is my laptop, so the cedar-rm directory is at a different place
-    mount_path_prefix = '/home/anmol/mounts/cedar-rm/'
-elif 'computecanada' in node_name: # we're in compute canada, maybe in an interactive node, or a scheduler node.
-    mount_path_prefix = '/home/asa224/' # home directory
-else:
-    # this is probably my workstation or TS server
-    mount_path_prefix = '/home/jianjunming/data/open_datasets'
+
+
 
 config = {}
 # set the data directory and output hdf5 file path.
 # data_dir is the top level path containing both training and validation sets of the brats dataset.
-#TODO
-config['data_dir_prefix'] = os.path.join(mount_path_prefix, 'BRATS2018/') # this should be top level path
-config['hdf5_filepath_prefix'] = '../data/BRATS2018/HDF5_Datasets/BRATS2018_Unprocessed.h5' # /home/jianjunming/projects/mm-gan-JianJuly/
-# config['hdf5_filepath_prefix_2017'] = os.path.join(mount_path_prefix, 'scratch/asa224/Datasets/BRATS2017/HDF5_Datasets/BRATS.h5') # top level path
-config['hdf5_combined'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS_Combined_Unprocessed.h5')
-config['hdf5_filepath_cropped'] =  '../data/BRATS2018/HDF5_Datasets/BRATS2018_Cropped.h5' # top level path
-# config['hdf5_filepath_cropped'] =  '../data/BRATS2018/HDF5_Datasets/BRATS2018_Cropped_Normalized_Unprocessed.h5' # top level path
-config['saveMeanVarFilepathHGG'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS2018_HDF5_Datasetstraining_data_hgg_mean_var.p')
-config['saveMeanVarFilepathLGG'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'BRATS2018_HDF5_Datasetstraining_data_lgg_mean_var.p')
-config['saveMeanVarCombinedData'] = os.path.join(os.sep.join(config['hdf5_filepath_prefix'].split(os.sep)[0:-1]), 'combined_data_mean_var.p')
+config['pathd_src'] = Path('/home/jianjunming/data/open_datasets/BRATS2018')
 
-config['model_snapshot_location'] = 'checkpoints/model-snapshots/'
-config['model_checkpoint_location'] = 'checkpoints/model-checkpoints/'
-config['model_prediction_location'] = 'checkpoints/model-predictions/'
+#TODO
+config['pathd_datasets'] = Path('../data')
+config['pathd_dataset'] = config['pathd_datasets']/'BRATS2018' # this should be top level path
+config['pathd_hdf5files'] = config['pathd_dataset']/'HDF5_Datasets' # this should be top level path
+config['path_hdf5_unprocessed'] = config['pathd_hdf5files']/'BRATS2018_unprocessed.h5' # /home/jianjunming/projects/mm-gan-JianJuly/
+# config['path_hdf5_combined'] = config['pathd_hdf5files']/'BRATS_Combined_Unprocessed.h5'
+# config['hdf5_filepath_cropped'] =  '../data/BRATS2018/HDF5_Datasets/BRATS2018_Cropped.h5' # top level path
+config['saveMeanVarFilepathHGG'] = config['pathd_hdf5files']/'training_data_hgg_mean_var.p'
+config['saveMeanVarFilepathLGG'] = config['pathd_hdf5files']/'training_data_lgg_mean_var.p'
+# config['saveMeanVarCombinedData'] = config['pathd_hdf5files']/'combined_data_mean_var.p'
+
+# config['model_snapshot_location'] = 'checkpoints/model-snapshots/'
+# config['model_checkpoint_location'] = 'checkpoints/model-checkpoints/'
+# config['model_prediction_location'] = 'checkpoints/model-predictions/'
+
 # # IF YOU PERFORM PREPROCESSING, THESE VARIABLES ARE TO BE CHANGED. DEFAULT VALUES ARE:
 # config['spatial_size_for_training'] = (240, 240) # If any preprocessing is done, then this needs to change. This is the shape of data that you want to train with. If you are changing this that means you did some preprocessing.
 # config['num_slices'] = 155 # number of slices in input data. THIS SHOULD CHANGE AS WELL WHEN PERFORMING PREPROCESSING
@@ -67,6 +63,7 @@ config['seed'] = 1338
 config['data_order'] = 'th' # what order should the indices be to store in hdf5 file
 config['train_hgg_patients'] = 210 # number of HGG patients in training
 config['train_lgg_patients'] = 75 # number of LGG patients in training
+# FIXME: number of validation
 config['validation_patients'] = 66 # number of patients in validation
 
 config['batch_size'] = 2 # how many images to load at once in the generator
@@ -74,19 +71,19 @@ config['batch_size'] = 2 # how many images to load at once in the generator
 config['cropping_coords'] = [29, 223, 41, 196, 0, 148] # coordinates used to crop the volumes, this is generated using the notebook checkLargestCropSize.ipynb
 config['size_after_cropping'] = [194, 155, 148] # set this if you set the above variable. Calculate this using the notebook again.
 
-config['data_split'] = {'train': 98,
-                        'test': 2}
+# config['data_split'] = {'train': 98,
+#                         'test': 2}
 
-config['std_scale_range'] = [6] # [4,6,8,10] scale the standard deviation for path generation process to allow patches from far off regions
-config['num_patches_per_patient'] = 50 # number of patches to generate for a single patient
-config['patch_size'] = [64, 64, 64] # size of patch to extract
-config['patch_input_shape'] = [4] + config['patch_size']
-config['gen_patches_from'] = 'original' # generate patches from the cropped version of the database or original.
-config['validate_on'] = 'original' # Perform validation on original images or cropped images
+# config['std_scale_range'] = [6] # [4,6,8,10] scale the standard deviation for path generation process to allow patches from far off regions
+# config['num_patches_per_patient'] = 50 # number of patches to generate for a single patient
+# config['patch_size'] = [64, 64, 64] # size of patch to extract
+# config['patch_input_shape'] = [4] + config['patch_size']
+# config['gen_patches_from'] = 'original' # generate patches from the cropped version of the database or original.
+# config['validate_on'] = 'original' # Perform validation on original images or cropped images
 config['num_labels'] = 3 # number of labels in the segmentation mask, except background
-config['max_label_val'] = 4
-
-config['val_shape_after_prediction'] = []
+# config['max_label_val'] = 4
+#
+# config['val_shape_after_prediction'] = []
 
 # check the order of data and chose proper data shape to save images
 if config['data_order'] == 'th':
@@ -101,8 +98,8 @@ if config['data_order'] == 'th':
     config['train_segmasks_shape_hgg_crop'] = (config['train_hgg_patients'], config['size_after_cropping'][0],config['size_after_cropping'][1], config['size_after_cropping'][2])
     config['train_segmasks_shape_lgg_crop'] = (config['train_lgg_patients'], config['size_after_cropping'][0], config['size_after_cropping'][1], config['size_after_cropping'][2])
     config['val_shape_crop'] = (config['validation_patients'], 4, config['size_after_cropping'][0], config['size_after_cropping'][1], config['size_after_cropping'][2])
-    config['numpy_patch_size'] = (config['num_patches_per_patient'], 4, config['patch_size'][0], config['patch_size'][1],
-                           config['patch_size'][2])
+    # config['numpy_patch_size'] = (config['num_patches_per_patient'], 4, config['patch_size'][0], config['patch_size'][1],
+    #                        config['patch_size'][2])
 elif config['data_order'] == 'tf':
     config['train_shape_hgg'] = (config['train_hgg_patients'], config['spatial_size_for_training'][0], config['spatial_size_for_training'][1], config['num_slices'], 4)
     config['train_shape_lgg'] = (config['train_lgg_patients'], config['spatial_size_for_training'][0], config['spatial_size_for_training'][1], config['num_slices'], 4)

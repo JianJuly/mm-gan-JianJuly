@@ -69,7 +69,7 @@ elif 'debug' in opt.log_level:
 # Create Training and Validation data loaders
 # =============================================================================
 if opt.path_prefix == "":
-    # parent_path = '/scratch/asa224/asa224/Datasets/BRATS2018/HDF5_Datasets/'
+    # pathd_hdf5files = '/scratch/asa224/asa224/Datasets/BRATS2018/HDF5_Datasets/'
     parent_path = '/local-scratch/anmol/data/{}/HDF5_Datasets/'.format(opt.dataset)
 else:
     # notice there's one less asa224 here
@@ -118,7 +118,7 @@ else:
     logger.critical("Invalid dataset name: {}".format(opt.dataset))
     sys.exit(-1)
 
-logger.debug('\tparent_path: \t\t{}'.format(parent_path))
+logger.debug('\tpathd_hdf5files: \t\t{}'.format(parent_path))
 logger.debug('\tparent_name: \t\t{}'.format(parent_name))
 logger.debug('\tdataset_name: \t\t{}'.format(dataset_name))
 logger.debug('\tdataset_type: \t\t{}'.format(dataset_type))
@@ -137,22 +137,22 @@ else:
 
 train_range = list(range(0, opt.train_patient_idx))
 
-n_dataloader, dataloader_for_viz = create_dataloaders(parent_path=parent_path,
-                               parent_name=parent_name,
-                               dataset_name=dataset_name,
-                                dataset_type=dataset_type,
-                               load_pat_names=True,
-                               load_seg=False,
-                               transform_fn=[Resize(size=(opt.img_height, opt.img_width)), ToTensor()],
-                               apply_normalization=True,
-                               which_normalization=which_normalization,
-                               train_range=train_range,
-                               resize_slices=resize_slices,
-                               get_viz_dataloader=True,
-                               num_workers=opt.n_cpu,
-                               load_indices=None,
-                               dataset=opt.dataset,
-                               shuffle=False)
+n_dataloader, dataloader_for_viz = create_dataloaders(path_hdf5files=parent_path,
+                                                      parent_name=parent_name,
+                                                      dataset_name=dataset_name,
+                                                      dataset_type=dataset_type,
+                                                      load_pat_names=True,
+                                                      load_seg=False,
+                                                      transform_fn=[Resize(size=(opt.img_height, opt.img_width)), ToTensor()],
+                                                      apply_normalization=True,
+                                                      which_normalization=which_normalization,
+                                                      train_range=train_range,
+                                                      resize_slices=resize_slices,
+                                                      get_viz_dataloader=True,
+                                                      num_workers=opt.n_cpu,
+                                                      load_indices=None,
+                                                      dataset=opt.dataset,
+                                                      shuffle=False)
 
 test_patient = []
 for k in range(0, opt.test_pats):
@@ -204,7 +204,7 @@ if opt.path_prefix == "":
     root = '/local-scratch/anmol/results_new/project_880/'
 else: # NOT USED
     root = os.path.join(opt.path_prefix, 'rrg_proj_dir/Results/project_880_new/mm_synthesis_gan_results/')
-    logger.warning("root: {}".format(root))
+    logger.warning("pathd_checkpoints: {}".format(root))
     logger.warning('Possible bad value for opt.path_prefix')
 
 model = opt.model_name
@@ -319,9 +319,9 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
         logger.info("Current idx_pat: {}".format(idx_pat))
         # if idx_pat > opt.train_patient_idx:
         #     logger.info("Now testing on patient {}".format(opt.train_patient_idx + 1))
-        #     main_path = os.path.join(root, model, 'scenario_results')
+        #     main_path = os.path.join(pathd_checkpoints, model, 'scenario_results')
         #
-        #     fixed_p = os.path.join(root, model, 'scenario_results', 'viz' + "_" + str(epoch + 1))
+        #     fixed_p = os.path.join(pathd_checkpoints, model, 'scenario_results', 'viz' + "_" + str(epoch + 1))
         #
         #     logger.info("Saving result as {}".format(fixed_p))
         #     status = show_intermediate_results(generator, test_patient, save_path=main_path,
@@ -387,7 +387,7 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
                 #     if opt.dataset != 'ISLES2015' and opt.dataset != 'BRATS2015':
                 #         label_list[:, idx] = 0
                 #
-                # elif k == 1:
+                # elif img_dst == 1:
                 #     # label_map[:, idx, ...] = 1
                 #
                 #     # this works with both discriminator types.
